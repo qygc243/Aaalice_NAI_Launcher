@@ -1,0 +1,46 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch: # 支持手动点击按钮触发编译
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Generate iOS host project
+        run: |
+          flutter create --platforms=ios .
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd ios
+          pod install
+          cd ..
+
+      - name: Build unsigned iOS app
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Package to IPA
+        run: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          zip -r Aaalice_NAI_Launcher_unsigned.ipa Payload
+          cd ../../..
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NAI-Launcher-iOS
+          path: build/ios/iphoneos/Aaalice_NAI_Launcher_unsigned.ipa
