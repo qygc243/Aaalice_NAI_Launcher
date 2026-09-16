@@ -18,22 +18,28 @@ jobs:
 
       - name: Generate iOS project & Fix Deployment Target
         run: |
-          # 1. 生成缺少的基础 iOS 宿主工程
+          # 1. 补全 iOS 宿主工程
           flutter create --platforms=ios .
 
-          # 2. 强制将 Podfile 中的平台版本指定为 iOS 16.0（满足 onnxruntime-objc 要求）
+          # 2. 锁定 iOS 部署目标为 16.0
           ruby -e '
             podfile = File.read("ios/Podfile")
             podfile.gsub!(/#? *platform :ios.*/, "platform :ios, '\''16.0'\''")
             File.write("ios/Podfile", podfile)
           '
-
-          # 3. 同步将 Xcode 项目默认构建目标修改为 16.0
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' ios/Runner.xcodeproj/project.pbxproj || true
 
-      - name: Install dependencies & Pods
+      - name: Code Generation & Dependencies
         run: |
           flutter pub get
+
+          # 生成多语言绑定 (解决 context.l10n 报错)
+          flutter gen-l10n || true
+
+          # 运行 build_runner 生成 Freezed 与 Riverpod 状态类 (解决 state.error 等缺失)
+          dart run build_runner build --delete-conflicting-outputs
+
+          # 安装 iOS CocoaPods 依赖
           cd ios
           pod repo update
           pod install
