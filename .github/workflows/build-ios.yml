@@ -1,7 +1,7 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch: # 支持手动点击按钮触发编译
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,14 +16,26 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate iOS host project
+      - name: Generate iOS project & Fix Deployment Target
         run: |
+          # 1. 生成缺少的基础 iOS 宿主工程
           flutter create --platforms=ios .
 
-      - name: Install dependencies
+          # 2. 强制将 Podfile 中的平台版本指定为 iOS 16.0（满足 onnxruntime-objc 要求）
+          ruby -e '
+            podfile = File.read("ios/Podfile")
+            podfile.gsub!(/#? *platform :ios.*/, "platform :ios, '\''16.0'\''")
+            File.write("ios/Podfile", podfile)
+          '
+
+          # 3. 同步将 Xcode 项目默认构建目标修改为 16.0
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' ios/Runner.xcodeproj/project.pbxproj || true
+
+      - name: Install dependencies & Pods
         run: |
           flutter pub get
           cd ios
+          pod repo update
           pod install
           cd ..
 
