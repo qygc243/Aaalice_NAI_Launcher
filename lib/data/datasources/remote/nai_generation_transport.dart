@@ -125,11 +125,12 @@ class NaiGenerationTransport {
   }) {
     return _dio.post<Uint8List>(
       _endpointService.imageUrl(ApiConstants.generateImageEndpoint),
-      data: buildGenerationFormData(requestData),
+      data: jsonEncode(requestData),
       cancelToken: request.cancelToken,
       onReceiveProgress: onProgress,
       options: Options(
         responseType: ResponseType.bytes,
+        contentType: Headers.jsonContentType,
         headers: _requestHeaders('application/x-zip-compressed'),
       ),
     );
@@ -141,10 +142,11 @@ class NaiGenerationTransport {
   ) {
     return _dio.post<ResponseBody>(
       _endpointService.imageUrl(ApiConstants.generateImageStreamEndpoint),
-      data: buildGenerationFormData(requestData),
+      data: jsonEncode(requestData),
       cancelToken: request.cancelToken,
       options: Options(
         responseType: ResponseType.stream,
+        contentType: Headers.jsonContentType,
         headers: _requestHeaders('application/x-msgpack'),
       ),
     );
